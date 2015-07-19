@@ -17,7 +17,8 @@
     "Makefile",
     "package.json",
     "Readme.md",
-    "test"
+    "test",
+	"index.js"
   ],
   "license": "MIT"
 }
