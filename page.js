@@ -133,7 +133,13 @@
 								page.callbacks.push(routeObj);
 							}
 
-							moveStarRoute(page.callbacks);
+							for (var i = 0; i < page.callbacks.length; ++i) {
+								var routeObject = page.callbacks[i];
+								if (routeObject.path === "*") {
+									page.callbacks.splice(i, 1);
+									page.callbacks.push(routeObject);
+								}
+							}
 
 							// show <path> with [state]
 						} else if ('string' === typeof path) {
@@ -142,16 +148,9 @@
 						} else {
 							page.start(path);
 						}
-					}
 
-					function moveStarRoute(arr) {
-						for (var i = 0; i < arr.length; ++i) {
-							var routeObject = arr[i];
-							if (routeObject.path === "*") {
-								arr.splice(i, 1);
-								arr.push(routeObject);
-							}
-						}
+
+
 					}
 
 					/**
@@ -350,12 +349,9 @@
 						prevContext = ctx;
 
 						function nextExit() {
-							if (page.exits.length > 0) {
-								var route = page.exits[j++];
-								var fn = route.route;
-								if (!fn)
-									return nextEnter();
-							}
+							var fn = page.exits[j++];
+							if (!fn)
+								return nextEnter();
 							fn(prev, nextExit);
 						}
 
@@ -419,12 +415,8 @@
 
 						var route = new Route(path);
 						for (var i = 1; i < arguments.length; ++i) {
-							var route = new Route(path);
-							var routeObj = {path: path, route: route.middleware((arguments[i])), callback: fn};
-							page.exits.push(routeObj);
-
+							page.exits.push(route.middleware(arguments[i]));
 						}
-						moveStarRoute(page.exits);
 					};
 
 					/**
