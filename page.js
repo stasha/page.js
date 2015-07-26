@@ -353,10 +353,10 @@
 							if (page.exits.length > 0) {
 								var route = page.exits[j++];
 								var fn = route.route;
-								if (fn)
-									fn(prev, nextExit);
+								if (!fn)
+									return nextEnter();
 							}
-							return nextEnter();
+							fn(prev, nextExit);
 						}
 
 						function nextEnter() {
