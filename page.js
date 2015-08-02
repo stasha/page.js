@@ -176,6 +176,11 @@
 					 */
 
 					page.len = 0;
+					
+					/**
+					 * Page unique id.
+					 */
+					page.uid = 0;
 
 					/**
 					 * Get or set basepath to `path`.
@@ -253,6 +258,10 @@
 
 					page.show = function (path, state, dispatch, push) {
 						var ctx = new Context(path, state);
+						// we don't allow navigation to the same url
+						if(page.current && page.current === ctx.path){
+							return;
+						}
 						page.current = ctx.path;
 						if (false !== dispatch)
 							page.dispatch(ctx);
@@ -485,6 +494,8 @@
 
 					Context.prototype.pushState = function () {
 						page.len++;
+						page.uid++;
+						this.state.uid = page.uid;
 						history.pushState(this.state, this.title, hashbang && this.path !== '/' ? '#!' + this.path : this.canonicalPath);
 					};
 
