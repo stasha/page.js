@@ -213,10 +213,10 @@
 						if (running)
 							return;
 						running = true;
-						if (false === options.dispatch)
-							dispatch = false;
-						if (false === options.decodeURLComponents)
-							decodeURLComponents = false;
+						
+						dispatch = options.dispatch || dispatch;
+						decodeURLComponents = options.decodeURLComponents || false;
+						
 						if (false !== options.popstate)
 							window.addEventListener('popstate', onpopstate, false);
 						if (false !== options.click) {
