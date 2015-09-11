@@ -133,13 +133,13 @@
 								page.callbacks.push(routeObj);
 							}
 
-							for (var i = 0; i < page.callbacks.length; ++i) {
-								var routeObject = page.callbacks[i];
-								if (routeObject.path === "*") {
-									page.callbacks.splice(i, 1);
-									page.callbacks.push(routeObject);
-								}
-							}
+							page.callbacks.sort(function (a, b) {
+								var routeA = a.path.replace(/\*.*?(\b|$)/g, "").replace(/\*/g, "").replace(/\/\//g, "/");
+								var routeB = b.path.replace(/\*.*?(\b|$)/g, "").replace(/\*/g, "").replace(/\/\//g, "/");
+								return routeB.length - routeA.length;
+							});
+							
+							console.log(page.callbacks);
 
 							// show <path> with [state]
 						} else if ('string' === typeof path) {
@@ -176,11 +176,16 @@
 					 */
 
 					page.len = 0;
-					
+
 					/**
 					 * Page unique id.
 					 */
-					page.uid = 0;
+					page.uid = 1;
+
+					/**
+					 * Page index for monitoring if navigation occured backward of forward
+					 */
+					page.index = (history.state && history.state.index) || 1;
 
 					/**
 					 * Get or set basepath to `path`.
@@ -213,10 +218,11 @@
 						if (running)
 							return;
 						running = true;
-						
-						dispatch = options.dispatch || dispatch;
-						decodeURLComponents = options.decodeURLComponents || false;
-						
+						if (!(typeof options.dispatch === "undefinded")) {
+							dispatch = options.dispatch === true;
+						}
+						decodeURLComponents = options.decodeURLComponents || true;
+
 						if (false !== options.popstate)
 							window.addEventListener('popstate', onpopstate, false);
 						if (false !== options.click) {
@@ -259,7 +265,7 @@
 					page.show = function (path, state, dispatch, push) {
 						var ctx = new Context(path, state);
 						// we don't allow navigation to the same url
-						if(page.current && page.current === ctx.path){
+						if (page.current && page.current === ctx.path) {
 							return;
 						}
 						page.current = ctx.path;
@@ -486,6 +492,22 @@
 
 					page.Context = Context;
 
+					function saveWindowDataToState() {
+
+						if (window && lastContext && !lastContext.saved) {
+							lastContext.state.scrollPosition = {x: window.pageXOffset, y: window.pageYOffset};
+							var body = document.body;
+							var html = document.documentElement;
+							var height = Math.max(body.scrollHeight, body.offsetHeight, html.clientHeight, html.scrollHeight, html.offsetHeight);
+							var width = Math.max(body.scrollWidth, body.offsetWidth, html.clientWidth, html.scrollWidth, html.offsetWidth);
+							lastContext.state.pageSize = {width: width, height: height};
+
+						}
+
+						lastContext = this;
+						lastContext.saved = false;
+					}
+
 					/**
 					 * Push state.
 					 *
@@ -495,7 +517,8 @@
 					Context.prototype.pushState = function () {
 						page.len++;
 						page.uid++;
-						this.state.uid = page.uid;
+						this.state.uid = this.state.index = page.index = page.uid;
+						this.state.direction = 0;
 						history.pushState(this.state, this.title, hashbang && this.path !== '/' ? '#!' + this.path : this.canonicalPath);
 					};
 
@@ -551,8 +574,9 @@
 					Route.prototype.middleware = function (fn) {
 						var self = this;
 						return function (ctx, next) {
-							if (self.match(ctx.path, ctx.params))
+							if (self.match(ctx.path, ctx.params)) {
 								return fn(ctx, next);
+							}
 							next();
 						};
 					};
@@ -606,12 +630,23 @@
 								}, 0);
 							});
 						}
+
 						return function onpopstate(e) {
 							if (!loaded)
 								return;
 							if (e.state) {
+								if (((e.state.index || 0) <= page.index)) {
+									e.state.direction = -1;
+									console.log("navigating back");
+								} else if (e.state.index > page.index) {
+									e.state.direction = 1;
+									console.log("navigating forward");
+								}
+
+								page.index = e.state.index || 0;
 								var path = e.state.path;
 								page.replace(path, e.state);
+
 							} else {
 								page.show(location.pathname + location.hash, undefined, undefined, false);
 							}
@@ -716,7 +751,8 @@
 
 					page.sameOrigin = sameOrigin;
 
-				}).call(this, require('_process'))
+				}
+				).call(this, require('_process'))
 			}, {"_process": 2, "path-to-regexp": 3}], 2: [function (require, module, exports) {
 // shim for using process in browser
 
